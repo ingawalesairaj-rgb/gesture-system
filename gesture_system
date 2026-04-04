@@ -1,0 +1,168 @@
+#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
+#include "BluetoothSerial.h"
+
+LiquidCrystal_I2C lcd(0x27, 16, 2);
+BluetoothSerial SerialBT;
+
+/* Flex pins */
+#define FLEX1 34   // Thumb
+#define FLEX2 35   // Index
+#define FLEX3 32   // Middle
+#define FLEX4 33   // Ring
+#define FLEX5 25   // Little
+
+/* Thresholds */
+int TH1 = 1310;      // Thumb -> bent when value increases
+int TH2 = 1950;     // Index -> bent when value decreases
+int TH3 = 1880;   // Middle -> bent when value decreases
+int TH4 = 1950;   // Ring -> bent when value decreases
+int TH5 = 1500;    // Little -> bent when value increases
+
+int v1, v2, v3, v4, v5;
+
+String gesture = "";
+String lastGesture = "";
+String currentGesture = "";
+int stableCount = 0;
+const int requiredStableCount = 2;
+
+int readFlex(int pin) {
+  long sum = 0;
+  for (int i = 0; i < 10; i++) {
+    sum += analogRead(pin);
+    delay(2);
+  }
+  return sum / 10;
+}
+
+void setup() {
+  Serial.begin(115200);
+  analogReadResolution(12);
+
+  Wire.begin(21, 22);
+  lcd.init();
+  lcd.backlight();
+
+  SerialBT.begin("ESP32_Gesture");
+
+  lcd.setCursor(0, 0);
+  lcd.print("Gesture System");
+  lcd.setCursor(0, 1);
+  lcd.print("Starting...");
+  delay(2000);
+
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("Bluetooth Ready");
+  lcd.setCursor(0, 1);
+  lcd.print("ESP32_Gesture");
+  delay(2000);
+  lcd.clear();
+
+  Serial.println("System Ready...");
+}
+
+void loop() {
+  v1 = readFlex(FLEX1);
+  v2 = readFlex(FLEX2);
+  v3 = readFlex(FLEX3);
+  v4 = readFlex(FLEX4);
+  v5 = readFlex(FLEX5);
+
+  Serial.print("T:");
+  Serial.print(v1);
+  Serial.print(" I:");
+  Serial.print(v2);
+  Serial.print(" M:");
+  Serial.print(v3);
+  Serial.print(" R:");
+  Serial.print(v4);
+  Serial.print(" L:");
+  Serial.println(v5);
+
+  // Bent logic based on your sensor direction
+  bool thumb  = (v1 < TH1);     // thumb increases
+  bool index  = (v2 < TH2);     // index decreases
+  bool middle = (v3 < TH3);     // middle decreases
+  bool ring   = (v4 < TH4);     // ring decreases
+  bool little = (v5 > TH5);     // little increases
+
+  Serial.print("  TB:");
+Serial.print(thumb);
+Serial.print(" IB:");
+Serial.print(index);
+Serial.print(" MB:");
+Serial.print(middle);
+Serial.print(" RB:");
+Serial.print(ring);
+Serial.print(" LB:");
+Serial.println(little);
+
+  gesture = "";
+
+  if (thumb && !index && !middle && !ring && !little) {
+    gesture = "Need Water";
+  }
+  else if (!thumb && index && !middle && !ring && !little) {
+    gesture = "Need Food";
+  }
+  else if (!thumb && !index && middle && !ring && !little) {
+    gesture = "Help";
+  }
+  else if (!thumb && !index && !middle && ring && !little) {
+    gesture = "Washroom";
+  }
+  else if (!thumb && !index && !middle && !ring && little) {
+    gesture = "Call Family";
+  }
+  else if (thumb && index && !middle && !ring && !little) {
+    gesture = "Call ";
+  }
+  else if (!thumb && index && middle && !ring && !little) {
+    gesture = "medicine";
+  }
+  else if (!thumb && index && !middle && ring && !little) {
+    gesture = "Thank you";
+  }
+  else if (!thumb && index && !middle && !ring && little) {
+    gesture = "Emergency";
+  }
+
+
+  if (gesture != "" && gesture == currentGesture) {
+    stableCount++;
+  } 
+  else if (gesture != "") {
+    currentGesture = gesture;
+    stableCount = 1;
+  } 
+  else {
+    currentGesture = "";
+    stableCount = 0;
+  }
+
+  if (stableCount >= requiredStableCount && gesture != lastGesture) {
+    Serial.print("Gesture: ");
+    Serial.println(gesture);
+
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("Gesture:");
+    lcd.setCursor(0, 1);
+    lcd.print(gesture);
+
+    SerialBT.println(gesture);
+    lastGesture = gesture;
+  }
+
+  if (gesture == "") {
+    lastGesture = "";
+    lcd.setCursor(0, 0);
+    lcd.print("No Gesture      ");
+    lcd.setCursor(0, 1);
+    lcd.print("Monitoring...   ");
+  }
+
+  delay(2000);
+}

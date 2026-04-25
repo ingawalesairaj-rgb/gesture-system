@@ -13,11 +13,11 @@ BluetoothSerial SerialBT;
 #define FLEX5 25   // Little
 
 /* Thresholds */
-int TH1 = 1310;      // Thumb -> bent when value increases
-int TH2 = 1950;     // Index -> bent when value decreases
-int TH3 = 1880;   // Middle -> bent when value decreases
-int TH4 = 1950;   // Ring -> bent when value decreases
-int TH5 = 1500;    // Little -> bent when value increases
+int TH1 = 2155;      // Thumb -> bent when value increases
+int TH2 = 2100;     // Index -> bent when value decreases
+int TH3 = 1950;   // Middle -> bent when value decreases
+int TH4 = 2180;   // Ring -> bent when value decreases
+int TH5 = 1900;    // Little -> bent when value increases
 
 int v1, v2, v3, v4, v5;
 
@@ -113,22 +113,43 @@ Serial.println(little);
   else if (!thumb && !index && !middle && ring && !little) {
     gesture = "Washroom";
   }
-  else if (!thumb && !index && !middle && !ring && little) {
+  else if (!thumb && !index && !middle && !ring && little) { 
     gesture = "Call Family";
   }
   else if (thumb && index && !middle && !ring && !little) {
-    gesture = "Call ";
+    gesture = "Thank you";
   }
   else if (!thumb && index && middle && !ring && !little) {
-    gesture = "medicine";
+    gesture = "Welcome";
   }
   else if (!thumb && index && !middle && ring && !little) {
-    gesture = "Thank you";
+    gesture = "Medicine";
   }
   else if (!thumb && index && !middle && !ring && little) {
     gesture = "Emergency";
   }
-
+  else if (thumb && !index && !middle && !ring && !little) {
+    gesture = "Go";
+  }
+  else if (!thumb && !index && middle && ring && !little) {
+    gesture = "Hello";
+  }
+  else if (!thumb && !index && middle && !ring && little) {
+    gesture = "Come";
+  }
+  else if (!thumb && !index && !middle && ring && little) {
+    gesture = "Stop";
+  }
+  else if (!thumb && index && middle && ring && little) {
+    gesture = "Ok";
+  }
+  else if (thumb && !index && !middle && ring && !little) {
+    gesture = "Yes";
+  }
+  else if (thumb && !index && middle && ring && little) {
+    gesture = "No";
+  }
+  
 
   if (gesture != "" && gesture == currentGesture) {
     stableCount++;
